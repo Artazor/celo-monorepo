@@ -168,5 +168,6 @@
   "settings": "Configuración",
   "help": "Ayuda",
   "dismiss": "Ocultar",
-  "review": "Revisión"
+  "review": "Revisión",
+  "currentBalance": "Saldo actual"
 }

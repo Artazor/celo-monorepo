@@ -168,5 +168,6 @@
   "settings": "Settings",
   "help": "Help",
   "dismiss": "Dismiss",
-  "review": "Review"
+  "review": "Review",
+  "currentBalance": "Current Balance"
 }
