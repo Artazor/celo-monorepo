@@ -61,6 +61,11 @@ export type StackParamList = {
   [Screens.FeeEducation]: undefined
   [Screens.FeeExchangeEducation]: undefined
   [Screens.FiatExchange]: undefined
+  [Screens.FiatExchangeAmount]:
+    | {
+        isAddFunds: boolean
+      }
+    | undefined
   [Screens.GoldEducation]: undefined
   [Screens.ImportWallet]:
     | {

@@ -42,6 +42,7 @@ import ReclaimPaymentConfirmationScreen from 'src/escrow/ReclaimPaymentConfirmat
 import ExchangeReview from 'src/exchange/ExchangeReview'
 import ExchangeTradeScreen from 'src/exchange/ExchangeTradeScreen'
 import FeeExchangeEducation from 'src/exchange/FeeExchangeEducation'
+import FiatExchangeAmount from 'src/fiatExchanges/FiatExchangeAmount'
 import { CURRENCY_ENUM } from 'src/geth/consts'
 import i18n from 'src/i18n'
 import PhoneNumberLookupQuotaScreen from 'src/identity/PhoneNumberLookupQuotaScreen'
@@ -248,11 +249,7 @@ const emptyWithBackButtonHeaderOption = () => ({
 
 const navigateHome = () => navigate(Screens.WalletHome)
 
-const paymentRequestUnavailableScreenOptions = ({
-  route,
-}: {
-  route: RouteProp<StackParamList, Screens.PaymentRequestUnavailable>
-}) => ({
+const paymentRequestUnavailableScreenOptions = () => ({
   ...emptyHeader,
   headerLeft: () => <TopBarIconButton icon={<Times />} onPress={navigateHome} />,
   headerLeftContainerStyle: { paddingLeft: 20 },
@@ -403,6 +400,23 @@ const backupScreens = (Navigator: typeof Stack) => (
   </>
 )
 
+const fiatExchangesAmountScreenOptions = ({
+  route,
+}: {
+  route: RouteProp<StackParamList, Screens.FiatExchangeAmount>
+}) => {
+  return {
+    ...emptyHeader,
+    headerLeft: () => <BackButton eventName={CustomEventNames.send_amount_back} />,
+    headerTitle: () => (
+      <HeaderTitleWithBalance
+        title={i18n.t(`fiatExchangeFlow:${route.params?.isAddFunds ? 'add_funds' : 'cash_out'}`)}
+        token={CURRENCY_ENUM.DOLLAR}
+      />
+    ),
+  }
+}
+
 const settingsScreens = (Navigator: typeof Stack) => (
   <>
     <Navigator.Screen options={headerWithBackButton} name={Screens.Account} component={Account} />
@@ -440,6 +454,11 @@ const settingsScreens = (Navigator: typeof Stack) => (
       options={headerWithBackButton}
       name={Screens.FiatExchange}
       component={FiatExchange}
+    />
+    <Navigator.Screen
+      options={fiatExchangesAmountScreenOptions}
+      name={Screens.FiatExchangeAmount}
+      component={FiatExchangeAmount}
     />
   </>
 )

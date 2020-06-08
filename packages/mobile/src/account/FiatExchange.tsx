@@ -5,7 +5,7 @@ import variables from '@celo/react-components/styles/variables'
 import { CURRENCIES, CURRENCY_ENUM } from '@celo/utils/src'
 import { useNavigation } from '@react-navigation/native'
 import * as React from 'react'
-import { useTranslation, WithTranslation } from 'react-i18next'
+import { Trans, useTranslation, WithTranslation } from 'react-i18next'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import SafeAreaView from 'react-native-safe-area-view'
 import { WebView } from 'react-native-webview'
@@ -30,25 +30,15 @@ function FiatExchange(props: Props) {
   const { t } = useTranslation()
   const navigation = useNavigation()
   const goToAddFunds = React.useCallback(() => {
-    navigation.navigate(Screens.FiatExchange)
+    navigation.navigate(Screens.FiatExchangeAmount)
   }, [])
   const localCurrencyCode = useLocalCurrencyCode()
   const isUsdLocalCurrency = localCurrencyCode === LocalCurrencyCode.USD
   const dollarBalance = useSelector(stableTokenBalanceSelector)
-  const localBalance = useDollarsToLocalAmount(dollarBalance)
   const dollarAmount = {
-    value: dollarBalance,
+    value: dollarBalance ?? '0',
     currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
   }
-  let localAmount
-  if (!isUsdLocalCurrency) {
-    localAmount = {
-      value: localBalance,
-      currencyCode: localCurrencyCode,
-    }
-  }
-  console.log(dollarAmount)
-  console.log(localAmount)
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,11 +52,12 @@ function FiatExchange(props: Props) {
           showLocalAmount={!isUsdLocalCurrency}
         />
         {!isUsdLocalCurrency && (
-          <CurrencyDisplay
-            showLocalAmount={false}
-            style={styles.dollarBalance}
-            amount={dollarAmount}
-          />
+          <Text style={styles.dollarBalance}>
+            <Trans i18nKey="dollarBalance" ns={Namespaces.walletFlow5}>
+              <CurrencyDisplay showLocalAmount={false} hideSymbol={true} amount={dollarAmount} />{' '}
+              Celo Dollars
+            </Trans>
+          </Text>
         )}
       </View>
       <View style={styles.options}>
