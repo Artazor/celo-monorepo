@@ -1,5 +1,7 @@
 {
   "add_funds": "Añadir fondos",
-  "cash_out": "Retirar"
+  "cash_out": "Retirar",
+  "celoDollarsAt": "Celo Dollars @ <1></1>",
+  "dislamerCeloDollars": "Los valores del dólar celo son estimados.",
+  "pleaseSelectProvider": "Seleccione un proveedor a continuación. Estos enlaces se conectan a un servicio de terceros."
 }
-

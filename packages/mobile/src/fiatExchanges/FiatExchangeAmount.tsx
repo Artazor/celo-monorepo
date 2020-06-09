@@ -1,4 +1,4 @@
-import Button, { BtnSizes, BtnTypes } from '@celo/react-components/components/Button.v2'
+import Button, { BtnSizes } from '@celo/react-components/components/Button.v2'
 import KeyboardAwareScrollView from '@celo/react-components/components/KeyboardAwareScrollView'
 import KeyboardSpacer from '@celo/react-components/components/KeyboardSpacer'
 import colors from '@celo/react-components/styles/colors.v2'
@@ -8,125 +8,94 @@ import { parseInputAmount } from '@celo/utils/src/parsing'
 import { StackScreenProps } from '@react-navigation/stack'
 import BigNumber from 'bignumber.js'
 import * as React from 'react'
-import { Trans, useTranslation, WithTranslation } from 'react-i18next'
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Trans, useTranslation } from 'react-i18next'
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native'
 import { getNumberFormatSettings } from 'react-native-localize'
 import SafeAreaView from 'react-native-safe-area-view'
-import { connect, useDispatch, useSelector } from 'react-redux'
-import { hideAlert, showError } from 'src/alert/actions'
-import { errorSelector } from 'src/alert/reducer'
-import CeloAnalytics from 'src/analytics/CeloAnalytics'
-import { CustomEventNames } from 'src/analytics/constants'
-import { MoneyAmount } from 'src/apollo/types'
-import { ErrorMessages } from 'src/app/ErrorMessages'
+import { useDispatch, useSelector } from 'react-redux'
+// import { hideAlert, showError } from 'src/alert/actions'
+// import { errorSelector } from 'src/alert/reducer'
+// import CeloAnalytics from 'src/analytics/CeloAnalytics'
+// import { CustomEventNames } from 'src/analytics/constants'
+// import { MoneyAmount } from 'src/apollo/types'
+// import { ErrorMessages } from 'src/app/ErrorMessages'
 import CurrencyDisplay from 'src/components/CurrencyDisplay'
 import LineItemRow from 'src/components/LineItemRow'
-import { DOLLAR_TRANSACTION_MIN_AMOUNT } from 'src/config'
-import { fetchExchangeRate } from 'src/exchange/actions'
-import { ExchangeRatePair } from 'src/exchange/reducer'
+import { DOLLAR_ADD_FUNDS_MIN_AMOUNT, DOLLAR_CASH_OUT_MIN_AMOUNT } from 'src/config'
 import { CURRENCIES, CURRENCY_ENUM } from 'src/geth/consts'
-import { Namespaces, withTranslation } from 'src/i18n'
-import { LocalCurrencyCode } from 'src/localCurrency/consts'
+import { Namespaces } from 'src/i18n'
+// import { LocalCurrencyCode } from 'src/localCurrency/consts'
 import {
-  convertDollarsToLocalAmount,
   convertDollarsToMaxSupportedPrecision,
   convertLocalAmountToDollars,
+  // convertLocalAmountToDollars,
 } from 'src/localCurrency/convert'
 import { useLocalCurrencyCode } from 'src/localCurrency/hooks'
-import { getLocalCurrencyCode, getLocalCurrencyExchangeRate } from 'src/localCurrency/selectors'
-import { navigate } from 'src/navigator/NavigationService'
+import { getLocalCurrencyExchangeRate, getLocalCurrencySymbol } from 'src/localCurrency/selectors'
 import { Screens } from 'src/navigator/Screens'
 import { StackParamList } from 'src/navigator/types'
-import { RootState } from 'src/redux/reducers'
+import { getRecentPayments } from 'src/send/selectors'
+import { isPaymentLimitReached, showLimitReachedError } from 'src/send/utils'
 import DisconnectBanner from 'src/shared/DisconnectBanner'
 import { dollarBalanceSelector } from 'src/stableToken/selectors'
 
 const { decimalSeparator } = getNumberFormatSettings()
 
-// interface State {
-// inputToken: CURRENCY_ENUM
-// makerToken: CURRENCY_ENUM
-// makerTokenAvailableBalance: string
-// inputAmount: string
-// }
-
-// interface StateProps {
-// exchangeRatePair: ExchangeRatePair | null
-// error: ErrorMessages | null
-// localCurrencyCode: LocalCurrencyCode
-// localCurrencyExchangeRate: string | null | undefined
-// }
-
-// interface DispatchProps {
-// fetchExchangeRate: typeof fetchExchangeRate
-// showError: typeof showError
-// hideAlert: typeof hideAlert
-// }
-
 type RouteProps = StackScreenProps<StackParamList, Screens.FiatExchangeAmount>
 
 type Props = RouteProps
 
-// const mapStateToProps = (state: RootState): StateProps => ({
-// exchangeRatePair: state.exchange.exchangeRatePair,
-// error: errorSelector(state),
-// localCurrencyCode: getLocalCurrencyCode(state),
-// localCurrencyExchangeRate: getLocalCurrencyExchangeRate(state),
-// })
+const oneDollarAmount = {
+  value: new BigNumber('1'),
+  currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
+}
 
-export function ExchangeTradeScreen({ route }: Props) {
-  const isAddFunds = route.params?.isAddFunds ?? false
-  const { t } = useTranslation()
+export function ExchangeTradeScreen({ navigation, route }: Props) {
+  function isNextButtonValid() {
+    const passMinAmount = dollarAmount.isGreaterThanOrEqualTo(
+      isAddFunds ? DOLLAR_ADD_FUNDS_MIN_AMOUNT : DOLLAR_CASH_OUT_MIN_AMOUNT
+    )
+    const passMaxAmount =
+      isAddFunds || (dollarBalance && dollarAmount.isLessThanOrEqualTo(dollarBalance))
 
+    return dollarAmount && passMinAmount && passMaxAmount
+  }
+
+  function onChangeExchangeAmount(amount: string) {
+    setInputAmount(amount)
+  }
+
+  function goNext() {
+    const now = Date.now()
+    const isLimitReached = isPaymentLimitReached(now, recentPayments, dollarAmount.toNumber())
+    if (isLimitReached) {
+      dispatch(showLimitReachedError(now, recentPayments, localExchangeRate, localCurrencySymbol))
+      return
+    }
+
+    navigation.navigate(Screens.FiatExchangeOptions, {
+      amount: dollarAmount,
+      currencyCode: localCurrencyCode,
+      isAddFunds,
+    })
+  }
+
+  const { isAddFunds } = route.params
+  const { t } = useTranslation(Namespaces.fiatExchangeFlow)
+  const dispatch = useDispatch()
   const [inputAmount, setInputAmount] = React.useState('')
   const dollarBalance = useSelector(dollarBalanceSelector)
-
   const localExchangeRate = useSelector(getLocalCurrencyExchangeRate)
+  const localCurrencySymbol = useSelector(getLocalCurrencySymbol)
   const localCurrencyCode = useLocalCurrencyCode()
-  const dollarsToLocal = (amount: BigNumber.Value) =>
-    convertDollarsToLocalAmount(amount, localCurrencyCode ? localExchangeRate : 1)
+  const recentPayments = useSelector(getRecentPayments)
 
   const parsedInputAmount = parseInputAmount(inputAmount, decimalSeparator)
   const dollarAmount = convertDollarsToMaxSupportedPrecision(
-    dollarsToLocal(parsedInputAmount) ?? new BigNumber('0')
+    (!parsedInputAmount.isNaN() &&
+      convertLocalAmountToDollars(parsedInputAmount, localCurrencyCode ? localExchangeRate : 1)) ||
+      new BigNumber('0')
   )
-
-  const inputAmountIsValid = () => {
-    if (isAddFunds) {
-      return dollarBalance && dollarAmount.isLessThanOrEqualTo(dollarBalance)
-    } else {
-      // TBA
-      return false
-    }
-  }
-
-  const isNextInvalid = () => {
-    const amountIsInvalid =
-      // TODO: change  this
-      !inputAmountIsValid() || dollarAmount.isLessThan(DOLLAR_TRANSACTION_MIN_AMOUNT)
-
-    return amountIsInvalid
-  }
-
-  const dispatch = useDispatch()
-
-  const updateError = () => {
-    if (inputAmountIsValid()) {
-      // TODO: change this
-      dispatch(showError(ErrorMessages.NSF_DOLLARS))
-    } else {
-      dispatch(hideAlert())
-    }
-  }
-
-  const onChangeExchangeAmount = (amount: string) => {
-    setInputAmount(amount)
-    updateError()
-  }
-
-  const goNext = () => {
-    // TODO: Add logic here
-  }
 
   return (
     <SafeAreaView
@@ -142,7 +111,7 @@ export function ExchangeTradeScreen({ route }: Props) {
       >
         <View style={styles.amountInputContainer}>
           <View>
-            <Text style={styles.exchangeBodyText}>{t('global:next')}</Text>
+            <Text style={styles.exchangeBodyText}>{t('global:amount')}</Text>
           </View>
           <TextInput
             autoFocus={true}
@@ -159,25 +128,24 @@ export function ExchangeTradeScreen({ route }: Props) {
           textStyle={styles.subtotalBodyText}
           title={
             <Trans i18nKey="celoDollarsAt" ns={Namespaces.fiatExchangeFlow}>
-              Celo Dollars @{' '}
-              <CurrencyDisplay
-                amount={{
-                  value: localExchangeRate ?? new BigNumber('0'),
-                  currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code,
-                }}
-              />
+              Celo Dollars @ <CurrencyDisplay amount={oneDollarAmount} />
             </Trans>
           }
           amount={
-            <CurrencyDisplay amount={{ value: dollarAmount, currencyCode: CURRENCY_ENUM.DOLLAR }} />
+            <CurrencyDisplay
+              amount={{ value: dollarAmount, currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code }}
+              hideSymbol={true}
+              showLocalAmount={false}
+            />
           }
         />
       </KeyboardAwareScrollView>
+      <Text style={styles.dislamerCeloDollars}>{t('dislamerCeloDollars')}</Text>
       <Button
         onPress={goNext}
-        text={t(`global:next`)}
-        accessibilityLabel={t('continue')}
-        disabled={isNextInvalid()}
+        text={t('global:next')}
+        accessibilityLabel={t('global:next')}
+        disabled={!isNextButtonValid()}
         size={BtnSizes.FULL}
         style={styles.reviewBtn}
         testID="FiatExchangeNextButton"
@@ -220,9 +188,14 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: Platform.select({ android: 27, ios: 23 }), // vertical align = center
     height: 48, // setting height manually b.c. of bug causing text to jump on Android
-    color: colors.goldDark,
+    color: colors.greenUI,
   },
   reviewBtn: {
     padding: variables.contentPadding,
+  },
+  dislamerCeloDollars: {
+    ...fontStyles.small,
+    color: colors.gray4,
+    textAlign: 'center',
   },
 })

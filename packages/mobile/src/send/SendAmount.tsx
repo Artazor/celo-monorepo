@@ -16,11 +16,7 @@ import CeloAnalytics from 'src/analytics/CeloAnalytics'
 import { CustomEventNames } from 'src/analytics/constants'
 import { TokenTransactionType } from 'src/apollo/types'
 import { ErrorMessages } from 'src/app/ErrorMessages'
-import {
-  DAILY_PAYMENT_LIMIT_CUSD,
-  DOLLAR_TRANSACTION_MIN_AMOUNT,
-  NUMBER_INPUT_MAX_DECIMALS,
-} from 'src/config'
+import { DOLLAR_TRANSACTION_MIN_AMOUNT, NUMBER_INPUT_MAX_DECIMALS } from 'src/config'
 import { getFeeEstimateDollars } from 'src/fees/selectors'
 import { Namespaces } from 'src/i18n'
 import { fetchAddressesAndValidate } from 'src/identity/actions'
@@ -47,7 +43,7 @@ import { StackParamList } from 'src/navigator/types'
 import { getRecipientVerificationStatus, Recipient, RecipientKind } from 'src/recipients/recipient'
 import useSelector from 'src/redux/useSelector'
 import { getRecentPayments } from 'src/send/selectors'
-import { dailyAmountRemaining, getFeeType, isPaymentLimitReached } from 'src/send/utils'
+import { getFeeType, isPaymentLimitReached, showLimitReachedError } from 'src/send/utils'
 import DisconnectBanner from 'src/shared/DisconnectBanner'
 import { fetchDollarBalance } from 'src/stableToken/actions'
 import { stableTokenBalanceSelector } from 'src/stableToken/reducer'
@@ -172,30 +168,6 @@ function SendAmount(props: Props) {
   )
   const recentPayments = useSelector(getRecentPayments)
 
-  const showLimitReachedError = React.useCallback(
-    (now: number) => {
-      const dailyRemainingcUSD = dailyAmountRemaining(now, recentPayments)
-      const dailyRemaining = convertDollarsToLocalAmount(
-        dailyRemainingcUSD,
-        localCurrencyExchangeRate
-      )
-      const dailyLimit = convertDollarsToLocalAmount(
-        DAILY_PAYMENT_LIMIT_CUSD,
-        localCurrencyExchangeRate
-      )
-
-      const translationParams = {
-        currencySymbol: localCurrencySymbol,
-        dailyRemaining,
-        dailyLimit,
-        dailyRemainingcUSD,
-        dailyLimitcUSD: DAILY_PAYMENT_LIMIT_CUSD,
-      }
-      dispatch(showError(ErrorMessages.PAYMENT_LIMIT_REACHED, null, translationParams))
-    },
-    [recentPayments]
-  )
-
   const continueAnalyticsParams = React.useMemo(() => {
     return {
       method: props.route.params?.isFromScan ? 'scan' : 'search',
@@ -215,7 +187,9 @@ function SendAmount(props: Props) {
     const now = Date.now()
     const isLimitReached = isPaymentLimitReached(now, recentPayments, dollarAmount.toNumber())
     if (isLimitReached) {
-      showLimitReachedError(now)
+      dispatch(
+        showLimitReachedError(now, recentPayments, localCurrencyExchangeRate, localCurrencySymbol)
+      )
       return
     }
 

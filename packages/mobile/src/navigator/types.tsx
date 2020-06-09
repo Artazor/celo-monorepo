@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js'
 import { EscrowedPayment } from 'src/escrow/actions'
 import { ExchangeConfirmationCardProps } from 'src/exchange/ExchangeConfirmationCard'
 import { AddressValidationType } from 'src/identity/reducer'
+import { LocalCurrencyCode } from 'src/localCurrency/consts'
 import { Screens } from 'src/navigator/Screens'
 import { Recipient } from 'src/recipients/recipient'
 import { TransactionDataInput } from 'src/send/SendAmount'
@@ -61,11 +62,14 @@ export type StackParamList = {
   [Screens.FeeEducation]: undefined
   [Screens.FeeExchangeEducation]: undefined
   [Screens.FiatExchange]: undefined
-  [Screens.FiatExchangeAmount]:
-    | {
-        isAddFunds: boolean
-      }
-    | undefined
+  [Screens.FiatExchangeAmount]: {
+    isAddFunds: boolean
+  }
+  [Screens.FiatExchangeOptions]: {
+    isAddFunds: boolean
+    amount: BigNumber
+    currencyCode: LocalCurrencyCode
+  }
   [Screens.GoldEducation]: undefined
   [Screens.ImportWallet]:
     | {

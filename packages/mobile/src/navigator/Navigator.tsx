@@ -34,6 +34,7 @@ import BackupSocial from 'src/backup/BackupSocial'
 import BackupSocialIntro from 'src/backup/BackupSocialIntro'
 import BackButton from 'src/components/BackButton.v2'
 import CancelButton from 'src/components/CancelButton.v2'
+import CurrencyDisplay from 'src/components/CurrencyDisplay'
 import DappKitAccountScreen from 'src/dappkit/DappKitAccountScreen'
 import DappKitSignTxScreen from 'src/dappkit/DappKitSignTxScreen'
 import DappKitTxDataScreen from 'src/dappkit/DappKitTxDataScreen'
@@ -43,7 +44,8 @@ import ExchangeReview from 'src/exchange/ExchangeReview'
 import ExchangeTradeScreen from 'src/exchange/ExchangeTradeScreen'
 import FeeExchangeEducation from 'src/exchange/FeeExchangeEducation'
 import FiatExchangeAmount from 'src/fiatExchanges/FiatExchangeAmount'
-import { CURRENCY_ENUM } from 'src/geth/consts'
+import FiatExchangeOptions from 'src/fiatExchanges/FiatExchangeOptions'
+import { CURRENCIES, CURRENCY_ENUM } from 'src/geth/consts'
 import i18n from 'src/i18n'
 import PhoneNumberLookupQuotaScreen from 'src/identity/PhoneNumberLookupQuotaScreen'
 import ImportWallet from 'src/import/ImportWallet'
@@ -417,6 +419,28 @@ const fiatExchangesAmountScreenOptions = ({
   }
 }
 
+const fiatExchangesOptionsScreenOptions = ({
+  route,
+}: {
+  route: RouteProp<StackParamList, Screens.FiatExchangeOptions>
+}) => {
+  const amount = (
+    <CurrencyDisplay
+      amount={{ value: route.params.amount, currencyCode: CURRENCIES[CURRENCY_ENUM.DOLLAR].code }}
+    />
+  )
+  return {
+    ...emptyHeader,
+    headerLeft: () => <BackButton eventName={CustomEventNames.send_amount_back} />,
+    headerTitle: () => (
+      <HeaderTitleWithSubtitle
+        title={amount}
+        subTitle={i18n.t(`fiatExchangeFlow:${route.params?.isAddFunds ? 'add_funds' : 'cash_out'}`)}
+      />
+    ),
+  }
+}
+
 const settingsScreens = (Navigator: typeof Stack) => (
   <>
     <Navigator.Screen options={headerWithBackButton} name={Screens.Account} component={Account} />
@@ -459,6 +483,11 @@ const settingsScreens = (Navigator: typeof Stack) => (
       options={fiatExchangesAmountScreenOptions}
       name={Screens.FiatExchangeAmount}
       component={FiatExchangeAmount}
+    />
+    <Navigator.Screen
+      options={fiatExchangesOptionsScreenOptions}
+      name={Screens.FiatExchangeOptions}
+      component={FiatExchangeOptions}
     />
   </>
 )
